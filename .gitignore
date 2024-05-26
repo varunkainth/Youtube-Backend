@@ -10,3 +10,5 @@
 .prettierignore
 
 package-locak.json
+
+.gitignore
