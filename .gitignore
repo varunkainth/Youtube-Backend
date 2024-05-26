@@ -5,3 +5,8 @@
 /.vscode
 /node_modules
 ./dist
+
+.prettierrc
+.prettierignore
+
+package-locak.json
