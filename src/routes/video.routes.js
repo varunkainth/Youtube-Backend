@@ -12,7 +12,7 @@ import {
 
 const routers = Router();
 
-routers.route("/allvideos").get(getAllVideos);
+routers.route("/").get(getAllVideos);
 routers.route("/upload").post(
   verifyJWT,
   upload.fields([

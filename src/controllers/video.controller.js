@@ -68,7 +68,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
       .sort(sortCriteria)
       .limit(limit)
       .skip((page - 1) * limit)
-      .populate("userId", "name"); 
+      // .populate("userId", "name");
 
     const totalVideos = await Video.countDocuments(searchQuery);
 
@@ -85,6 +85,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, response, "all videos are fetch "));
   } catch (error) {
+    console.log(error);
     return res
       .status(500)
       .json(new ApiError(500, error.message, "error while fetching videos"));
