@@ -94,14 +94,14 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
   try {
-    const { title, description, thumbnail, video } = req.body;
+    const { title, description } = req.body;
 
-    if (!title || !description || !thumbnail || !video) {
+    if (!title || !description) {
       throw new ApiError(400, "Missing required fields in request body");
     }
 
-    const videoPath = req.file.path;
-    const thumbnailPath = req.files.thumbnail.path;
+    const videoPath = req.file?.videoFile[0].path;
+    const thumbnailPath = req.files?.thumbnail[0].path;
 
     if (!videoPath && !thumbnailPath) {
       throw new ApiError(400, "Invalid file paths provided");
