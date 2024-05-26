@@ -159,12 +159,12 @@ const getVideoById = asyncHandler(async (req, res) => {
 const updateVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   //TODO: update video details like title, description, thumbnail
-  const { title, description, thumbnail } = req.body;
+  const { title, description } = req.body;
 
   if (!isValidObjectId(videoId)) {
     throw new ApiError(400, "Invalid video id provided");
   }
-  if (!title || !description || !thumbnail) {
+  if (!title || !description) {
     throw new ApiError(400, "Invalid video details provided");
   }
   try {
