@@ -44,39 +44,61 @@ const toggleSubscription = asyncHandler(async (req, res) => {
     // user.subscriptions.addToSet(newSubscription._id);
     await user.save();
 
-    return res.status(200).json(new ApiResponse(200, "Subscription created"));
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          subscription: newSubscription,
+        },
+        "Subscription created"
+      )
+    );
   }
 });
 
 // controller to return subscriber list of a channel
 const getUserChannelSubscribers = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
+
   if (!isValidObjectId(channelId)) {
     throw new ApiError(400, "Invalid Channel Id");
   }
-  const channel = await Channel.findById(channelId);
+
+  const channel = await User.findById(channelId);
   if (!channel) {
     throw new ApiError(404, "Channel not found");
   }
-  const subscribers = await Subscription.find({ channelId });
-  const userSubscribers = subscribers.map((sub) => sub.userId);
-  const users = await User.find({ _id: { $in: userSubscribers } });
+
+  const subscriptions = await Subscription.find({ channel: channelId });
+  const subscriberIds = subscriptions.map((sub) => sub.subscriber);
+
+  const users = await User.find({ _id: { $in: subscriberIds } });
+
   return res.status(200).json(new ApiResponse(200, users));
 });
 
 // controller to return channel list to which user has subscribed
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-  const { subscriberId } = req.params;
-  if (!isValidObjectId(subscriberId)) {
+  const { userId } = req.params;
+
+  // Validate subscriberId
+  if (!isValidObjectId(userId)) {
     throw new ApiError(400, "Invalid Subscriber Id");
   }
-  const user = await User.findById(subscriberId);
+
+  // Find the user by ID
+  const user = await User.findById(userId);
   if (!user) {
     throw new ApiError(404, "User not found");
   }
-  const subscribedChannels = await Subscription.find({ userId: subscriberId });
-  const channelIds = subscribedChannels.map((sub) => sub.channelId);
-  const channels = await Channel.find({ _id: { $in: channelIds } });
+
+  // Find the subscriptions for the user
+  const subscriptions = await Subscription.find({
+    subscriber: userId,
+  }).populate("channel", "fullname username avatar coverimage email createdAt");
+
+  const channels = subscriptions.map((sub) => sub.channel);
+
   return res.status(200).json(new ApiResponse(200, channels));
 });
 
