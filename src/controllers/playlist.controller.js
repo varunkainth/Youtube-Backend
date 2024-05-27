@@ -9,18 +9,24 @@ const createPlaylist = asyncHandler(async (req, res) => {
   try {
     const { name, description, videos } = req.body;
 
+    if (!name || !description || !videos) {
+      throw new ApiError(400, "All fields are required");
+    }
+
+    // console.log(videos);
     //TODO: create playlist
     const playlist = await Playlist.create({
       name,
       description,
       owner: req.user._id,
-      videos: videos.map((videoId) => mongoose.Types.ObjectId(videoId)),
+      videos: videos.map((videoId) =>new  mongoose.Types.ObjectId(videoId)),
     });
     return res
       .status(201)
-      .json(new ApiResponse(201, "Playlist created", playlist));
+      .json(new ApiResponse(201, playlist, "Playlist created"));
   } catch (error) {
-    return res.status(500).json(new ApiError(500, error.message));
+    console.log(error)
+    return res.status(500).json(new ApiError(500, error.message,error));
   }
 });
 
@@ -31,7 +37,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
     const playlists = await Playlist.find({ owner: userId });
     return res
       .status(200)
-      .json(new ApiResponse(200, "User playlists", playlists));
+      .json(new ApiResponse(200, playlists, "User playlists"));
   } catch (error) {
     return res.status(500).json(new ApiError(500, error.message));
   }
@@ -47,7 +53,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     }
     return res
       .status(200)
-      .json(new ApiResponse(200, "Playlist found", playlist));
+      .json(new ApiResponse(200, playlist, "Playlist found"));
   } catch (error) {
     return res.status(500).json(new ApiError(500, error.message));
   }
@@ -69,7 +75,7 @@ const addVideoToPlaylist = asyncHandler(async (req, res) => {
     }
     return res
       .status(200)
-      .json(new ApiResponse(200, "Video added to playlist", playlist));
+      .json(new ApiResponse(200, playlist, "Video added to playlist"));
   } catch (error) {
     return res.status(500).json(new ApiError(500, error.message));
   }
@@ -90,7 +96,7 @@ const removeVideoFromPlaylist = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(new ApiResponse(200, "Video removed from playlist", playlist));
+    .json(new ApiResponse(200, playlist, "Video removed from playlist"));
 });
 
 const deletePlaylist = asyncHandler(async (req, res) => {
@@ -102,7 +108,7 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(new ApiResponse(200, "Playlist deleted", playlist));
+    .json(new ApiResponse(200, playlist, "Playlist deleted"));
 });
 
 const updatePlaylist = asyncHandler(async (req, res) => {
@@ -122,7 +128,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(new ApiResponse(200, "Playlist updated", playlist));
+    .json(new ApiResponse(200, playlist, "Playlist updated"));
 });
 
 export {

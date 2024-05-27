@@ -7,29 +7,45 @@ import { asyncHandler } from "../utils/asynchandle.js";
 
 const toggleSubscription = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
-  // TODO: toggle subscription
+
+  // Check if the provided channelId is a valid ObjectId
   if (!isValidObjectId(channelId)) {
     throw new ApiError(400, "Invalid Channel Id");
   }
+
+  // Find the user by ID
   const user = await User.findById(req.user._id);
-  const subscription = await Subscription.findOne({
-    channelId,
-    userId: req.user._id,
-  });
-  if (subscription) {
-    await Subscription.deleteOne({ _id: subscription._id });
-    user.subscriptions.pull(subscription._id);
-    await user.save();
-    return res.status(200).json(new ApiResponse(200, "Subscription deleted"));
+  if (!user) {
+    throw new ApiError(404, "User not found");
   }
-  const newSubscription = new Subscription({
-    channelId,
-    userId: req.user._id,
+
+  // Check if the user is already subscribed to the channel
+  const existingSubscription = await Subscription.findOne({
+    channel: channelId,
+    subscriber: req.user._id,
   });
-  await newSubscription.save();
-  user.subscriptions.push(newSubscription._id);
-  await user.save();
-  return res.status(200).json(new ApiResponse(200, "Subscription created"));
+
+  if (existingSubscription) {
+    // If the subscription exists, delete it
+    await Subscription.deleteOne({ _id: existingSubscription._id });
+    // user.subscriptions.pull(existingSubscription._id);
+    await user.save();
+
+    return res.status(200).json(new ApiResponse(200, "Subscription deleted"));
+  } else {
+    // If the subscription does not exist, create a new one
+    const newSubscription = new Subscription({
+      channel: channelId,
+      subscriber: req.user._id,
+    });
+
+    await newSubscription.save();
+    // user.subscriptions.push(newSubscription._id);
+    // user.subscriptions.addToSet(newSubscription._id);
+    await user.save();
+
+    return res.status(200).json(new ApiResponse(200, "Subscription created"));
+  }
 });
 
 // controller to return subscriber list of a channel

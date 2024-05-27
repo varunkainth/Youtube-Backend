@@ -343,7 +343,7 @@ const getuserChannelProfile = asyncHandler(async (req, res) => {
   const channel = await User.aggregate([
     {
       $match: {
-        username: username?.toLowerCase(), // lowercase
+        username: username?.toLowerCase(), // Match the username (case insensitive)
       },
     },
     {
@@ -351,7 +351,7 @@ const getuserChannelProfile = asyncHandler(async (req, res) => {
         from: "subscriptions",
         localField: "_id",
         foreignField: "channel",
-        as: "subscribers",
+        as: "subscribers", // Lookup subscribers of the channel
       },
     },
     {
@@ -359,21 +359,15 @@ const getuserChannelProfile = asyncHandler(async (req, res) => {
         from: "subscriptions",
         localField: "_id",
         foreignField: "subscriber",
-        as: "subscribeTo",
+        as: "subscribeTo", // Lookup channels the user subscribes to
       },
     },
     {
       $addFields: {
-        subscribersCount: { $size: "$subscribers" },
-        ChannelsubscribeToCount: { $size: "$subscribeTo" },
+        subscribersCount: { $size: "$subscribers" }, // Count the number of subscribers
+        ChannelsubscribeToCount: { $size: "$subscribeTo" }, // Count the number of channels subscribed to
         isSubscribed: {
-          $cond: {
-            if: {
-              $in: [req.user?._id, "$subscribers.subscriber"], // check if user is subscribed to channel
-            },
-            then: true,
-            else: false,
-          },
+          $in: [req.user?._id, "$subscribers.subscriber"], // Check if the current user is subscribed
         },
       },
     },
