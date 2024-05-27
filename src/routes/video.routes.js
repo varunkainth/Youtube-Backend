@@ -12,15 +12,17 @@ import {
 
 const routers = Router();
 
-routers.route("/").get(getAllVideos);
-routers.route("/upload").post(
-  verifyJWT,
-  upload.fields([
-    { name: "thumbnail", maxCount: 1 },
-    { name: "videoFile", maxCount: 1 },
-  ]),
-  publishAVideo
-);
+routers
+  .route("/")
+  .get(getAllVideos)
+  .post(
+    verifyJWT,
+    upload.fields([
+      { name: "thumbnail", maxCount: 1 },
+      { name: "videoFile", maxCount: 1 },
+    ]),
+    publishAVideo
+  );
 
 routers
   .route("/:videoId")

@@ -18,16 +18,16 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(404, "Video not found");
   }
-  const like = await Like.findOne({ video: videoId, user: req.user._id });
+  const like = await Like.findOne({ video: videoId, likedBy: req.user._id });
   if (like) {
     await Like.findByIdAndDelete(like._id);
     video.likes--;
   } else {
-    const newLike = await Like.create({ video: videoId, user: req.user._id });
+    const newLike = await Like.create({ video: videoId, likedBy: req.user._id });
     video.likes++;
   }
   await video.save();
-  return new ApiResponse(200, "Like toggled", { like: video.likes });
+  return new ApiResponse(200, "Like toggled",);
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {

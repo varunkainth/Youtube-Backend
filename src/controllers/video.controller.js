@@ -67,8 +67,8 @@ const getAllVideos = asyncHandler(async (req, res) => {
     const videos = await Video.find(searchQuery)
       .sort(sortCriteria)
       .limit(limit)
-      .skip((page - 1) * limit)
-      // .populate("userId", "name");
+      .skip((page - 1) * limit);
+    // .populate("userId", "name");
 
     const totalVideos = await Video.countDocuments(searchQuery);
 
@@ -95,43 +95,63 @@ const getAllVideos = asyncHandler(async (req, res) => {
 const publishAVideo = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
-
     if (!title || !description) {
-      throw new ApiError(400, "Missing required fields in request body");
+      throw new ApiError(400, "Invaild Fields ");
     }
 
-    const videoPath = req.file?.videoFile[0].path;
-    const thumbnailPath = req.files?.thumbnail[0].path;
-
-    if (!videoPath && !thumbnailPath) {
-      throw new ApiError(400, "Invalid file paths provided");
+    if (
+      !req.files ||
+      !req.files.videoFile ||
+      !req.files.videoFile[0] ||
+      !req.files.thumbnail ||
+      !req.files.thumbnail[0]
+    ) {
+      throw new ApiError(400, "Invalid video and thumbnail path");
     }
 
-    const uploadedThumbnail = await uploadToCloudStorage(thumbnailPath);
-    const uploadedVideo = await uploadToCloudStorage(videoPath);
+    const videoLocalPath = req.files.videoFile[0].path;
+    const thumbnailLocalPath = req.files.thumbnail[0].path;
 
-    if (!uploadedThumbnail || !uploadedVideo) {
-      throw new ApiError(400, "Error uploading file to cloud storage");
+    if (!videoLocalPath) {
+      throw new ApiError(400, "Invaild video path ");
+    }
+    if (!thumbnailLocalPath) {
+      throw new ApiError(400, "Invaild  thumbnail path ");
     }
 
-    const newVideo = await Video.create({
+    const uploadedVideo = await uploadOnCloudinary(videoLocalPath)
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+
+    // const [uploadedVideo, uploadedThumbnail] = await Promise.all([
+    //   uploadOnCloudinary(videoLocalPath),
+    //   uploadOnCloudinary(thumbnailLocalPath),
+    // ]);
+
+    if (!uploadedVideo || !uploadedThumbnail) {
+      throw new ApiError(400, "Cannot upload on server || cloudinary ");
+    }
+
+    const video = await Video.create({
       title,
       description,
-      thumbnail: uploadedThumbnail.url,
       videoFile: uploadedVideo.url,
+      thumbnail: uploadedThumbnail.url,
       duration: uploadedVideo.duration,
-      owner: req.user?._id,
+      owner: req.user._id,
     });
-
-    return res.status(201).json(
-      new ApiResponse(201, "Video published successfully ", {
-        video: newVideo,
-      })
-    );
+    if (!video) {
+      throw new ApiError(400, "Cannot create video ");
+    }
+    return res
+      .status(200)
+      .json(new ApiResponse(200, video, "video is published successfully"));
   } catch (error) {
+    console.log(error);
     return res
       .status(500)
-      .json(new ApiError(500, error.message, "error while publishing video"));
+      .json(
+        new ApiError(500, "Some Error from internal server", error.message)
+      );
   }
 });
 
