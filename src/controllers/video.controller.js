@@ -265,6 +265,11 @@ const deleteVideo = asyncHandler(async (req, res) => {
     if (!video) {
       return res.status(404).json(new ApiError(404, "Video not found"));
     }
+    const channel = await Channel.findOneAndUpdate(
+      { videos: videoId },
+      { $pull: { videos: videoId } },
+      { new: true }
+    );
     const deletedVideo = await Video.findByIdAndDelete(videoId);
     if (!deletedVideo) {
       throw new ApiError(500, "Error deleting video");

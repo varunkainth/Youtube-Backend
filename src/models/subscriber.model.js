@@ -17,6 +17,8 @@ const channelSchema = new Schema({
     ref: "User",
     required: true,
   },
+},{
+  timestamps: true
 });
 
 // Subscriber Schema
@@ -28,7 +30,10 @@ const subscriberSchema = new Schema({
       subscribedAt: { type: Date, default: Date.now },
     },
   ],
-});
+},{
+  timestamps: true
+}
+);
 
 // Subscription Schema
 const subscriptionSchema = new Schema({

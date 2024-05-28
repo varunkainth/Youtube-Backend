@@ -1,48 +1,66 @@
 import mongoose from "mongoose";
 import { Video } from "../models/video.model.js";
-import { Subscription } from "../models/subscription.model.js";
+// import {  } from "../models/subscriber.model.js";
 import { Like } from "../models/like.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asynchandle.js";
+import { Channel, Subscription } from "../models/subscriber.model.js";
 
 const getChannelStats = asyncHandler(async (req, res) => {
   // TODO: Get the channel stats like total video views, total subscribers, total videos, total likes etc.
-  const channel = await Channel.findById(req.params.id);
-  if (!channel) {
-    throw new ApiError("Channel not found", 404);
-  }
-  const totalVideos = await Video.countDocuments({ channel: req.params.id });
-  const totalSubscribers = await Subscription.countDocuments({
-    channel: req.params.id,
-  });
-  const totalLikes = await Like.countDocuments({ channel: req.params.id });
-  const totalViews = await Video.aggregate([
-    { $match: { channel: req.params.id } },
-    { $group: { _id: null, totalViews: { $sum: "$views" } } },
-  ]);
-  const totalViewsCount = totalViews[0]?.totalViews || 0;
-  const totalComments = await Video.aggregate([
-    { $match: { channel: req.params.id } },
-    { $group: { _id: null, totalComments: { $sum: "$comments" } } },
-    ]);
-    const totalCommentsCount = totalComments[0]?.totalComments || 0;
-      const totalSharesCount = totalShares[0]?.totalShares || 0;
-      const totalViewsPerVideo = totalViewsCount / totalVideos;
-      const totalCommentsPerVideo = totalCommentsCount / totalVideos;
-      // const totalSharesPerVideo = totalSharesCount / totalVideos;
+  const channelId = req.params.channelId;
+  try {
+    const channel = await Channel.findById(channelId);
 
+    if (!channel) {
       return res
+        .status(404)
+        .json({ success: false, message: "Channel not found" });
+    }
+
+    // Calculate total subscribers
+    const totalSubscribers = await Subscription.countDocuments({
+      channelId: channelId,
+    });
+
+    // Calculate total videos
+    const totalVideos = await Video.countDocuments({ channel: channelId });
+
+    // Calculate total video views and total likes
+    const videoStats = await Video.aggregate([
+      { $match: { channel: channelId } },
+      {
+        $group: {
+          _id: null,
+          totalViews: { $sum: "$views" },
+          totalLikes: { $sum: "$likes" },
+        },
+      },
+    ]);
+
+    const totalViews = videoStats.length ? videoStats[0].totalViews : 0;
+    const totalLikes = videoStats.length ? videoStats[0].totalLikes : 0;
+
+    // Prepare the stats
+    const stats = {
+      totalSubscribers,
+      totalVideos,
+      totalViews,
+      totalLikes,
+    };
+
+    return res
       .status(200)
-      .json(new ApiResponse(true, "Channel stats fetched successfully", {
-        totalVideos,
-        totalSubscribers,
-        totalLikes,
-        totalViewsCount,
-        totalViewsPerVideo,
-        totalCommentsCount,
-        totalCommentsPerVideo,
-        }));
+      .json(
+        new ApiResponse(200, stats, "Channel stats retrieved successfully")
+      );
+  } catch (error) {
+    console.error("Error fetching channel stats:", error);
+    return res
+      .status(500)
+      .json(new ApiError(500, "Internal Server Error", error));
+  }
 });
 
 const getChannelVideos = asyncHandler(async (req, res) => {
@@ -50,9 +68,9 @@ const getChannelVideos = asyncHandler(async (req, res) => {
   const channel = await Channel.findById(req.params.id);
   if (!channel) {
     throw new ApiError("Channel not found", 404);
-    }
-    const videos = await Video.find({ channel: req.params.id });
-    return res
+  }
+  const videos = await Video.find({ channel: req.params.id });
+  return res
     .status(200)
     .json(new ApiResponse(true, "Channel videos fetched successfully", videos));
 });

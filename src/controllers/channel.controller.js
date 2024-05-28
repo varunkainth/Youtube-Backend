@@ -1,10 +1,10 @@
 import { isValidObjectId } from "mongoose";
-import { User } from "../models/user.model";
-import { Video } from "../models/video.model";
-import { ApiError } from "../utils/ApiError";
-import { ApiResponse } from "../utils/ApiResponse";
-import { asyncHandler } from "../utils/asynchandle";
-import { Channel } from "../models/subscriber.model";
+import { User } from "../models/user.model.js";
+import { Video } from "../models/video.model.js";
+import { ApiError } from "../utils/ApiError.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
+import { asyncHandler } from "../utils/asynchandle.js";
+import { Channel } from "../models/subscriber.model.js";
 
 const createChannel = asyncHandler(async (req, res) => {
   try {
@@ -82,7 +82,7 @@ const deleteChannel = asyncHandler(async (req, res) => {
     await Video.deleteMany({
       _id: { $in: channel.videos.map((id) => ObjectId(id)) },
     });
-    
+
     const channels = await Channel.findByIdAndDelete(channelId);
     if (!channels) {
       throw new ApiError(400, "Channel not found");
@@ -117,32 +117,89 @@ const getVideoFromChannel = asyncHandler(async (req, res) => {
 });
 
 const getTotalVideoCount = asyncHandler(async (req, res) => {
-  const { channelId } = req.params;
-  if (!isValidObjectId(channelId)) {
-    throw new ApiError(400, "Invalid channel id");
-  }
-  const channel = await Channel.findById(channelId);
-  if (!channel) {
-    throw new ApiError(400, "Channel not found");
-  }
-  Channel.countDocuments({
-    _id: channelId,
-    videos: { $exists: true, $ne: [] },
-  }).exec((err, videoCount) => {
-    if (err) {
-      console.error(err);
-      throw new ApiError(500, "Internal Server Error ", err);
+  try {
+    const { channelId } = req.params;
+    if (!isValidObjectId(channelId)) {
+      throw new ApiError(400, "Invalid channel id");
     }
+    const channel = await Channel.findById(channelId);
+    if (!channel) {
+      throw new ApiError(400, "Channel not found");
+    }
+    Channel.countDocuments({
+      _id: channelId,
+      videos: { $exists: true, $ne: [] },
+    }).exec((err, videoCount) => {
+      if (err) {
+        console.error(err);
+        throw new ApiError(500, "Internal Server Error ", err);
+      }
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(
+            200,
+            videoCount,
+            "Total video count fetched successfully"
+          )
+        );
+    });
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "Internal Server Error", error);
+  }
+});
+
+const showPublishedVideosForChannel = asyncHandler(async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    if (!isValidObjectId(channelId)) {
+      throw new ApiError(400, "Invalid channel id");
+    }
+    const channel = await Channel.findById(channelId).populate("videos");
+    const published = await Video.find({
+      _id: { $in: channel.videos },
+      isPublished: true,
+    });
+    if (!channel) {
+      throw new ApiError(400, "Channel not found");
+    }
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, published, "Published Videos Fetch Sucessfully")
+      );
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "Internal Server Error ", error);
+  }
+});
+
+const countPublishedVideos = asyncHandler(async (req, res) => {
+  try {
+    const { channelId } = req.params;
+    if (!isValidObjectId(channelId)) {
+      throw new ApiError(400, "Invalid channel id");
+    }
+    const channel = await Channel.findById(channelId).populate("videos");
+    const publishedVideoCount = await Video.countDocuments({
+      _id: { $in: channel.videos },
+      published: true,
+    });
     return res
       .status(200)
       .json(
         new ApiResponse(
           200,
-          videoCount,
-          "Total video count fetched successfully"
+          publishedVideoCount,
+          "Published Videos Count Fetch Sucessfully"
         )
       );
-  });
+  } catch (error) {
+    console.log(error);
+    throw new ApiError(500, "Internal Server Error", error);
+  }
 });
 
 export {
@@ -151,4 +208,6 @@ export {
   deleteChannel,
   getVideoFromChannel,
   getTotalVideoCount,
+  showPublishedVideosForChannel,
+  countPublishedVideos
 };
