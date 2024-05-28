@@ -4,7 +4,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asynchandle.js";
 import { uploadOnCloudinary } from "../utils/Cloudinary.js";
-
+import { Channel } from "../models/subscriber.model.js";
+import { User } from "../models/user.model.js";
 const getAllVideos = asyncHandler(async (req, res) => {
   try {
     const {
@@ -94,11 +95,27 @@ const getAllVideos = asyncHandler(async (req, res) => {
 
 const publishAVideo = asyncHandler(async (req, res) => {
   try {
+    // const { userId } = req.params;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new ApiError(404, "user not found");
+    }
+
+    const channelId = user.channels;
+
+    if (!isValidObjectId(channelId)) {
+      throw new ApiError(400, "Invalid Channel Id or No channel Id");
+    }
     const { title, description } = req.body;
     if (!title || !description) {
       throw new ApiError(400, "Invaild Fields ");
     }
 
+    const channel = await Channel.findOne({ owner: req.user._id });
+    if (!channel) {
+      throw new ApiError(404, "Channel not found for the user");
+    }
     if (
       !req.files ||
       !req.files.videoFile ||
@@ -119,8 +136,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
       throw new ApiError(400, "Invaild  thumbnail path ");
     }
 
-    const uploadedVideo = await uploadOnCloudinary(videoLocalPath)
-    const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+    const uploadedVideo = await uploadOnCloudinary(videoLocalPath);
+    const uploadedThumbnail = await uploadOnCloudinary(thumbnailLocalPath);
 
     // const [uploadedVideo, uploadedThumbnail] = await Promise.all([
     //   uploadOnCloudinary(videoLocalPath),
@@ -142,6 +159,17 @@ const publishAVideo = asyncHandler(async (req, res) => {
     if (!video) {
       throw new ApiError(400, "Cannot create video ");
     }
+
+    await Channel.findByIdAndUpdate(
+      channelId,
+      {
+        $push: { videos: video._id },
+      },
+      {
+        new: true,
+      }
+    );
+
     return res
       .status(200)
       .json(new ApiResponse(200, video, "video is published successfully"));
