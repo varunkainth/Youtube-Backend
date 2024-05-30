@@ -13,13 +13,15 @@ import { asyncHandler } from "../utils/asynchandle.js";
 const toggleSubscription = asyncHandler(async (req, res) => {
   try {
     const { channelId } = req.params;
-    const { userId } = req.user._id;
+    const userId = req.user._id;
 
     const existingSubscription = await Subscription.findOne({
       subscriberId: userId,
       channelId: channelId,
     });
+
     if (existingSubscription) {
+      // Unsubscribe logic
       await Subscription.deleteOne({
         subscriberId: userId,
         channelId: channelId,
@@ -28,17 +30,12 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         $inc: { subscriberCount: -1 },
       });
 
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(
-            200,
-            { subscribed: false },
-            "Unsubscribed successfully"
-          )
-        );
+      return res.status(200).json(
+        new ApiResponse(200, { subscribed: false }, "Unsubscribed successfully")
+      );
     } else {
-      const newSubscription = await Subscription.create({
+      // Subscribe logic
+      const newSubscription = new Subscription({
         subscriberId: userId,
         channelId: channelId,
       });
@@ -46,30 +43,29 @@ const toggleSubscription = asyncHandler(async (req, res) => {
       await Channel.findByIdAndUpdate(channelId, {
         $inc: { subscriberCount: 1 },
       });
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(200, { subscribed: true }, "Subscribed successfully")
-        );
+
+      return res.status(200).json(
+        new ApiResponse(200, { subscribed: true }, "Subscribed successfully")
+      );
     }
   } catch (error) {
-    console.log(error);
-    return res
-      .status(500)
-      .json(new ApiError(500, "Internal Server Error", error));
+    console.error(error);
+    return res.status(500).json(
+      new ApiError(500, "Internal Server Error", error)
+    );
   }
 });
 
 const getSubscribedChannels = asyncHandler(async (req, res) => {
-  const { userId } = req.user.id;
+  const { userId } = req.user._id;
 
   try {
     const subscriptions = await Subscription.find({
       subscriberId: userId,
-    }).populate("channelId");
+    });
 
     const channels = subscriptions.map(
-      (subscription) => subscription.channelId
+      (subscription) => subscription.channelId._id
     );
 
     return res
@@ -82,7 +78,7 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         )
       );
   } catch (error) {
-    console.error("Error fetching subscribed channels:", error);
+    console.log("Error fetching subscribed channels:", error);
     return res
       .status(500)
       .json(new ApiError(500, "Internal Server Error", error));
@@ -96,7 +92,7 @@ const getUserChannelSubscribers = asyncHandler(async (req, res) => {
     const channels = await Channel.find({ owner: userId });
 
     if (!channels.length) {
-      throw new ApiError(404, "No channels found for this user");
+     return res.status(404).json(new ApiResponse(404, "No channels found for this user"));
     }
 
     const channelIds = channels.map((channel) => channel._id);
@@ -149,17 +145,17 @@ const countChannelsOwnerSubscribed = asyncHandler(async (req, res) => {
   const { channelId } = req.params;
   try {
     if (!isValidObjectId(channelId)) {
-      throw new ApiError(404, "ChannelId Does Not valid");
+      return res.status(404).json(new  ApiError(404, "ChannelId Does Not valid"));
     }
     const channel = await Channel.findById(channelId);
     if (!channel) {
-      throw new ApiError(404, "Channel does not exist");
+      return res.status(404).json(new  ApiError(404, "Channel does not exist"));
     }
     const ownerId = channel.owner;
     const subscriber = await Subscriber.findOne({ user: ownerId });
 
     if (!subscriber) {
-      throw new ApiError(404, "Subscriber not Found");
+      return res.status(404).json(new ApiResponse(404, "Subscriber not Found"));
     }
     const subscribedChannelCount = subscriber.subscribedChannels.length;
 
@@ -168,7 +164,7 @@ const countChannelsOwnerSubscribed = asyncHandler(async (req, res) => {
       .json(new ApiResponse(200, subscribedChannelCount, "Count Fetch"));
   } catch (error) {
     console.error("Error counting channels owner subscribed:", error);
-    throw new ApiError(500, "Internal Server Error");
+    return res.status(404).json(new  ApiError(500, "Internal Server Error"));
   }
 });
 

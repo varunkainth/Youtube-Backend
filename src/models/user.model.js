@@ -47,7 +47,7 @@ const userSchema = new Schema(
       type: String,
     },
     channels: {
-      type: [Schema.Types.ObjectId],
+      type: Schema.Types.ObjectId,
       ref: "Channel",
     },
   },

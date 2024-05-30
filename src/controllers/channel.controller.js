@@ -44,7 +44,13 @@ const updateChannel = asyncHandler(async (req, res) => {
     if (!name || !description) {
       throw new ApiError(400, "Enter the required field");
     }
-    const { channelId } = req.params;
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      throw new ApiError(400, "User not found");
+    }
+    const channelId = user.channels;
+
+    // const { channelId } = req.params;
     if (!isValidObjectId(channelId)) {
       throw new ApiError(400, "Invalid channel id");
     }
@@ -120,33 +126,33 @@ const getTotalVideoCount = asyncHandler(async (req, res) => {
   try {
     const { channelId } = req.params;
     if (!isValidObjectId(channelId)) {
-      throw new ApiError(400, "Invalid channel id");
+      return res.status(400).json(new ApiError(400, "Invalid channel id"));
     }
+
     const channel = await Channel.findById(channelId);
     if (!channel) {
-      throw new ApiError(400, "Channel not found");
+      return res.status(404).json(new ApiError(404, "Channel not found"));
     }
-    Channel.countDocuments({
+
+    const videoCount = await Channel.countDocuments({
       _id: channelId,
-      videos: { $exists: true, $ne: [] },
-    }).exec((err, videoCount) => {
-      if (err) {
-        console.error(err);
-        throw new ApiError(500, "Internal Server Error ", err);
-      }
-      return res
-        .status(200)
-        .json(
-          new ApiResponse(
-            200,
-            videoCount,
-            "Total video count fetched successfully"
-          )
-        );
+      videos: { $exists: true },
     });
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          videoCount,
+          "Total video count fetched successfully"
+        )
+      );
   } catch (error) {
-    console.log(error);
-    throw new ApiError(500, "Internal Server Error", error);
+    console.error(error);
+    return res
+      .status(500)
+      .json(new ApiError(500, "Internal Server Error", error.message));
   }
 });
 
@@ -176,6 +182,7 @@ const showPublishedVideosForChannel = asyncHandler(async (req, res) => {
   }
 });
 
+// Cannot GET /api/v1/channel/66580ae6d034a7461ebd7629/publishvideocount
 const countPublishedVideos = asyncHandler(async (req, res) => {
   try {
     const { channelId } = req.params;
@@ -209,5 +216,5 @@ export {
   getVideoFromChannel,
   getTotalVideoCount,
   showPublishedVideosForChannel,
-  countPublishedVideos
+  countPublishedVideos,
 };
