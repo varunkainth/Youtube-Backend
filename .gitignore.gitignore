@@ -1,0 +1,14 @@
+/node_modules
+*.env
+.env.*
+.git
+.gitignore
+.gitmodules
+.gitattributes
+.gitignore
+.gitmodules
+.gitattributes
+
+.prettierrc
+.prettierignore
+/public
